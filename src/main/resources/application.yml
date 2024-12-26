@@ -1,0 +1,20 @@
+server:
+  port: 8091
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost/plazoleta
+    username: root
+    password: toor
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/plazoleta-photo
+
+jwt:
+  secret: a8e8be637c4f4fe3c03f4c4c34fd8f4ad802b5037d10a7f762b3cd9e4d626e440d1a34468838e0a9a0501a9e3c761953cd20c9bc2d57b483378d8d6057486caca54c7a442798709d066807a7e259d0b0e2b59e6aab2b36ebf342067d4de87278fea29f3b3b80b7cee62948e09d7bf859cba1f19399b7673de96fb9bf994433ad310492e4c7fb5df441aa38012a05657eb3294c49554b06faf14b0d3762581d59cc4419778a4c170858032157d465f545fbfa0a2da90e6cd5df4c5587ac1d6456f3e1b0bea46653b0fd893d69767fa38846d851946d4f257208975d22caf9e71713dead510d1913f390bb1d0367114c225e37e10f03404fab2515e2bb0058ece0
+
