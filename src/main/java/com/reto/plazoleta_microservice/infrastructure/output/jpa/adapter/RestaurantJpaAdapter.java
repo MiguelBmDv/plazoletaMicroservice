@@ -1,10 +1,16 @@
 package com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter;
 
 import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import com.reto.plazoleta_microservice.domain.model.Restaurant;
 import com.reto.plazoleta_microservice.domain.spi.IRestaurantPersistencePort;
 import com.reto.plazoleta_microservice.infrastructure.exception.NoDataFoundException;
+import com.reto.plazoleta_microservice.infrastructure.exception.OwnerAlreadyExistsException;
 import com.reto.plazoleta_microservice.infrastructure.exception.RestaurantAlreadyExistsException;
 import com.reto.plazoleta_microservice.infrastructure.exception.RestaurantNotFoundException;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.entity.RestaurantEntity;
@@ -24,7 +30,9 @@ public class RestaurantJpaAdapter implements IRestaurantPersistencePort {
         if(restaurantRepository.findByNit(restaurant.getNit()).isPresent()){
             throw new RestaurantAlreadyExistsException();
         }
-        
+        if(restaurantRepository.findByOwnerId(restaurant.getOwnerId()).isPresent()){
+            throw new OwnerAlreadyExistsException();
+        }
         restaurantRepository.save(restaurantEntityMapper.toEntity(restaurant));
     }
 
@@ -35,6 +43,16 @@ public class RestaurantJpaAdapter implements IRestaurantPersistencePort {
             throw new NoDataFoundException();
         }
         return restaurantEntityMapper.toRestaurantList(restaurantEntityList);
+    }
+
+    @Override
+    public Page<Restaurant> getAllRestaurants(Pageable pageable) {
+        Page<RestaurantEntity> restaurantEntities = restaurantRepository.findAll(pageable);
+        List<Restaurant> restaurants = restaurantEntities.getContent()
+            .stream()
+            .map(restaurantEntityMapper::toRestaurant)
+            .collect(Collectors.toList());
+        return new PageImpl<>(restaurants, pageable, restaurantEntities.getTotalElements());
     }
 
     @Override

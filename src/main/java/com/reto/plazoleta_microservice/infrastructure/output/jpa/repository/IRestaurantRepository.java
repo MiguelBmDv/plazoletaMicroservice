@@ -6,9 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.entity.RestaurantEntity;
 
+
 public interface IRestaurantRepository extends JpaRepository <RestaurantEntity, Long> {
 
     Optional<RestaurantEntity> findByNit(Long nit);
+
+    Optional<RestaurantEntity> findByOwnerId(Long ownerId);
 
     void deleteByNit(Long nit);
 

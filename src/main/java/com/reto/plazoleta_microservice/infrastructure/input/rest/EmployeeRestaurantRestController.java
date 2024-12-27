@@ -19,7 +19,7 @@ import com.reto.plazoleta_microservice.application.handler.IEmployeeRestaurantHa
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/restaurant-staff/")
+@RequestMapping("/owner/restaurant-staff/")
 @RequiredArgsConstructor
 public class EmployeeRestaurantRestController {
 

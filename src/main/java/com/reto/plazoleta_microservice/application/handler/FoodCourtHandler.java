@@ -2,12 +2,18 @@ package com.reto.plazoleta_microservice.application.handler;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.reto.plazoleta_microservice.application.dto.FoodCourtRequest;
 import com.reto.plazoleta_microservice.application.dto.FoodCourtResponse;
+import com.reto.plazoleta_microservice.application.dto.FoodCourtUserResponse;
 import com.reto.plazoleta_microservice.application.mapper.FoodCourtRequestMapper;
 import com.reto.plazoleta_microservice.application.mapper.FoodCourtResponseMapper;
+import com.reto.plazoleta_microservice.application.mapper.FoodCourtUserResponseMapper;
 import com.reto.plazoleta_microservice.domain.api.IPhotoServicePort;
 import com.reto.plazoleta_microservice.domain.api.IRestaurantServicePort;
 import com.reto.plazoleta_microservice.domain.model.Photo;
@@ -26,6 +32,7 @@ public class FoodCourtHandler implements IFoodCourtHandler{
     private final IPhotoServicePort photoServicePort;
     private final FoodCourtRequestMapper foodCourtRequestMapper;
     private final FoodCourtResponseMapper foodCourtResponseMapper;
+    private final FoodCourtUserResponseMapper foodCourtUserResponseMapper;
 
     @Override
     public void saveRestaurantInFoodCourt(FoodCourtRequest foodCourtRequest) {
@@ -60,6 +67,14 @@ public class FoodCourtHandler implements IFoodCourtHandler{
         Restaurant restaurant = restaurantServicePort.getRestaurant(nit);
         photoServicePort.deletePhoto(restaurant.getPhotoId());
         restaurantServicePort.deleteRestaurant(nit);
+    }
+
+    @Override
+    public Page<FoodCourtUserResponse> getAllRestaurantForUser(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+        Page<Restaurant> restaurantPage = restaurantServicePort.getAllRestaurants(pageable);
+        List<Photo> photoList = photoServicePort.getAllPhotos(); 
+        return foodCourtUserResponseMapper.toUserResponsePage(restaurantPage, photoList);
     }
 
 }

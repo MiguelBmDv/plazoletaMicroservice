@@ -2,6 +2,8 @@ package com.reto.plazoleta_microservice.domain.usecase;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -28,6 +30,11 @@ public class RestaurantUseCase implements IRestaurantServicePort {
     @Override
     public List<Restaurant> getAllRestaurant() {
         return restaurantPersistencePort.getAllRestaurant();
+    }
+
+    @Override
+    public Page<Restaurant> getAllRestaurants(Pageable pageable) {
+        return restaurantPersistencePort.getAllRestaurants(pageable);
     }
 
     @Override

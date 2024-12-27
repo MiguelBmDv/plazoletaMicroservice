@@ -20,7 +20,7 @@ import com.reto.plazoleta_microservice.application.handler.IMenuHandler;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/menu/")
+@RequestMapping("/owner/menu/")
 @RequiredArgsConstructor
 public class MenuRestController {
 

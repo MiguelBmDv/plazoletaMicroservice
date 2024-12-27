@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 
 @RestController
-@RequestMapping("/food-court/")
+@RequestMapping("/owner/food-court/")
 @RequiredArgsConstructor
 public class FoodCourtRestController {
 
