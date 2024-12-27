@@ -59,7 +59,7 @@ public class RestaurantUseCase implements IRestaurantServicePort {
             JwtSecurityContext jwtSecurityContext = JwtSecurityContext.getContext(); 
 
             if (jwtSecurityContext != null) {
-                return jwtSecurityContext.getDocumentNumber(); 
+                return jwtSecurityContext.getDocumentNumber();   
             }
         }
 

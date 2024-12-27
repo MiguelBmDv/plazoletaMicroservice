@@ -2,6 +2,7 @@ package com.reto.plazoleta_microservice.domain.usecase;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -34,6 +35,13 @@ public class DishUseCase implements IDishServicePort {
     public List<Dish> getAllDish() {
         return dishPersistencePort.getAllDish();
     }
+
+    @Override
+    public Page<Dish> getDishesByRestaurant(Long restaurantId, String category, int page, int size) {
+        return dishPersistencePort.getDishesByRestaurant(restaurantId, category, page, size);
+    }
+    
+
 
     @Override
     public Dish getDish(Long id) {

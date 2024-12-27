@@ -2,10 +2,12 @@ package com.reto.plazoleta_microservice.application.handler;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import com.reto.plazoleta_microservice.application.dto.MenuRequest;
 import com.reto.plazoleta_microservice.application.dto.MenuResponse;
+import com.reto.plazoleta_microservice.application.dto.MenuUserResponse;
 import com.reto.plazoleta_microservice.application.mapper.MenuRequestMapper;
 import com.reto.plazoleta_microservice.application.mapper.MenuResponseMapper;
 import com.reto.plazoleta_microservice.domain.api.ICategoryServicePort;
@@ -15,6 +17,7 @@ import com.reto.plazoleta_microservice.domain.api.IRestaurantServicePort;
 import com.reto.plazoleta_microservice.domain.model.Category;
 import com.reto.plazoleta_microservice.domain.model.Dish;
 import com.reto.plazoleta_microservice.domain.model.Photo;
+import com.reto.plazoleta_microservice.domain.model.Restaurant;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +52,17 @@ public class MenuHandler implements IMenuHandler {
     public List<MenuResponse> getAllDishesFromMenu() {
         return menuResponseMapper.toResponseList(dishServicePort.getAllDish(), categoryServicePort.getAllCategory(), restaurantServicePort.getAllRestaurant(), photoServicePort.getAllPhotos());
     }
+
+    @Override
+    public Page<MenuUserResponse> getDishesByRestaurant(Long restaurantId, String category, int page, int size) {
+        Page<Dish> dishPage = dishServicePort.getDishesByRestaurant(restaurantId, category, page, size);
+        List<Category> categories = categoryServicePort.getAllCategory();
+        List<Restaurant> restaurants = restaurantServicePort.getAllRestaurant();
+        List<Photo> photos = photoServicePort.getAllPhotos();
+
+        return menuResponseMapper.toResponsePage(dishPage, categories, restaurants, photos);
+    }
+
 
     @Override
     public MenuResponse getDishFromMenu(Long id) {

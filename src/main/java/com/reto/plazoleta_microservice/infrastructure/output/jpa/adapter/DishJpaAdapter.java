@@ -2,6 +2,10 @@ package com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import com.reto.plazoleta_microservice.domain.model.Dish;
 import com.reto.plazoleta_microservice.domain.spi.IDishPersistencePort;
 import com.reto.plazoleta_microservice.infrastructure.exception.DishAlreadyExistsException;
@@ -48,6 +52,19 @@ public class DishJpaAdapter implements IDishPersistencePort {
     @Override
     public void deleteDish(Long id) {
         dishRespository.deleteById(id);
+    }
+
+    @Override
+    public Page<Dish> getDishesByRestaurant(Long restaurantId, String category, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<DishEntity> dishEntityPage;
+        if (category != null && !category.isEmpty()) {
+            dishEntityPage = dishRespository.findByRestaurantIdAndCategoryId(
+                restaurantId, Long.parseLong(category), pageable);
+        } else {
+            dishEntityPage = dishRespository.findByRestaurantId(restaurantId, pageable);
+        }
+        return dishEntityPage.map(dishEntitytMapper::toDish);
     }
 
 }
