@@ -42,7 +42,6 @@ public class MenuHandler implements IMenuHandler {
         dish.setActive(true);
         dish.setPhotoId(photo.getId());
         dish.setCategoryId(categoryId);
-        dish.setRestaurantId(menuRequest.getRestaurantId());
         dishServicePort.saveDish(dish);
     }
 
@@ -70,9 +69,19 @@ public class MenuHandler implements IMenuHandler {
         newDish.setId(oldDish.getId());
         newDish.setCategoryId(oldDish.getCategoryId());
         newDish.setName(oldDish.getName());
-        newDish.setActive(oldDish.getActive());
         newDish.setPhotoId(oldDish.getPhotoId());
         newDish.setRestaurantId(oldDish.getRestaurantId());
+        if (menuRequest.getDescription() != null) {
+            newDish.setDescription(menuRequest.getDescription());
+        } else {
+            newDish.setDescription(oldDish.getDescription());
+        }
+        if (menuRequest.getPrice() != null) {
+            newDish.setPrice(menuRequest.getPrice());
+        } else {
+            newDish.setPrice(oldDish.getPrice());
+        }
+        
         dishServicePort.updateDish(newDish);
     }
 

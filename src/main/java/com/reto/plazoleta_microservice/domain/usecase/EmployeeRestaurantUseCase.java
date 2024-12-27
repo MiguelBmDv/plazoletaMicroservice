@@ -32,9 +32,6 @@ public class EmployeeRestaurantUseCase implements IEmployeeRestaurantServicePort
         employeeRestaurant.setEmployeeDocument(user.getDocumentNumber());
         Long ownerId = extractOwnerIdFromToken();
         Restaurant restaurant = findRestaurantByOwnerId(ownerId);
-        if (restaurant == null) {
-            throw new IllegalStateException("El restaurante no existe para el propietario con ID: " + ownerId);
-        }
         employeeRestaurant.setRestaurantNit(restaurant.getNit());
         employeeRestaurantPersistencePort.saveEmployeeRestaurant(employeeRestaurant);
     }
