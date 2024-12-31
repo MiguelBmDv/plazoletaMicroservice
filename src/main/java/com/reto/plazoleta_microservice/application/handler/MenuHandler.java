@@ -46,6 +46,7 @@ public class MenuHandler implements IMenuHandler {
         dish.setPhotoId(photo.getId());
         dish.setCategoryId(categoryId);
         dishServicePort.saveDish(dish);
+    
     }
 
     @Override

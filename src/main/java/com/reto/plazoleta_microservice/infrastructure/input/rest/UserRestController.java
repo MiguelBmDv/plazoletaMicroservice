@@ -24,10 +24,7 @@ public class UserRestController {
     private final IMenuHandler menuHandler;
 
     @GetMapping("restaurants")
-    public ResponseEntity<Page<FoodCourtUserResponse>> getAllRestaurantsForUser(
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "10") int size
-    ) {
+    public ResponseEntity<Page<FoodCourtUserResponse>> getAllRestaurantsForUser(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size ) {
         Page<FoodCourtUserResponse> restaurants = foodCourtHandler.getAllRestaurantForUser(page, size);
         return ResponseEntity.ok(restaurants);
     }
