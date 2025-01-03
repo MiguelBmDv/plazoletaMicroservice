@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import com.reto.plazoleta_microservice.application.dto.OrderEntryRequest;
@@ -70,6 +71,18 @@ public class OrderEntryHandler implements IOrderEntryHandler{
     }
 
     @Override
+    public Page<OrderEntryResponse> getOrderByStatus(Long restaurantId, String status, int page, int size) {
+        Page<Order> orderPage = orderServicePort.getOrderByStatus(restaurantId, status, page, size);
+
+        List<List<OrderDish>> allOrderDishes = orderPage.getContent().stream()
+            .map(order -> orderDishServicePort.getAllOrderDish().stream()
+                    .filter(orderDish -> orderDish.getOrderId().equals(order.getId()))
+                    .toList()
+            ).toList();
+        return orderResponseMapper.toResponsePage(orderPage, allOrderDishes);
+    }
+
+    @Override
     public OrderEntryResponse getOrderFromEntry(Long id) {
         Order order = orderServicePort.getOrder(id);
         List<OrderDish> orderDishes = orderDishServicePort.getAllOrderDish().stream()
@@ -109,4 +122,5 @@ public class OrderEntryHandler implements IOrderEntryHandler{
         orderDishes.forEach(orderDish -> orderDishServicePort.deleteOrderDish(orderDish.getId()));
         orderServicePort.deleteOrder(id);
     }
+
 }

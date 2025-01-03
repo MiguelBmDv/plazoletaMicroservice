@@ -24,7 +24,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable()) 
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/home/**", "/orders/**").hasAnyAuthority("USER")
+                .requestMatchers("/home/**").hasAnyAuthority("USER")
+                .requestMatchers("/orders/**").hasAnyAuthority("EMPLOYEE")
                 .requestMatchers("/owner/food-court/**", "/owner/menu/**", "/owner/restaurant-staff/**").hasAnyAuthority("OWNER")
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated() 

@@ -3,6 +3,10 @@ package com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import com.reto.plazoleta_microservice.domain.model.Order;
 import com.reto.plazoleta_microservice.domain.model.OrderDish;
 import com.reto.plazoleta_microservice.domain.spi.IOrderDishPersistencePort;
@@ -70,6 +74,20 @@ public class OrderJpaAdapter implements IOrderPersistencePort, IOrderDishPersist
     }
 
     @Override
+    public Page<Order> getOrderByStatus(Long restaurantId, String status, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<OrderEntity> orderEntityPage;
+
+        if (status != null && !status.isEmpty()) {
+            orderEntityPage = orderRepository.findByRestaurantIdAndStatus(restaurantId, status, pageable);
+        } else {
+            orderEntityPage = orderRepository.findByRestaurantId(restaurantId, pageable);
+        }
+
+        return orderEntityPage.map(orderEntityMapper::toOrder);
+    }
+
+    @Override
     public void updateOrder(Order order) {
         orderRepository.save(orderEntityMapper.toEntity(order));
     }
@@ -90,6 +108,5 @@ public class OrderJpaAdapter implements IOrderPersistencePort, IOrderDishPersist
         }
     }
 
-    
 
 }

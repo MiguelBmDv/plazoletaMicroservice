@@ -24,6 +24,7 @@ import com.reto.plazoleta_microservice.domain.usecase.OrderDishUseCase;
 import com.reto.plazoleta_microservice.domain.usecase.OrderUseCase;
 import com.reto.plazoleta_microservice.domain.usecase.PhotoUseCase;
 import com.reto.plazoleta_microservice.domain.usecase.RestaurantUseCase;
+import com.reto.plazoleta_microservice.domain.utils.JwtUtilsDomain;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.CategoryJpaAdapter;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.DishJpaAdapter;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.EmployeeRestaurantJpaAdapter;
@@ -67,6 +68,7 @@ public class BeanConfiguration {
     private final IEmployeeRestaurantRepository employeeRestaurantRepository;
     private final EmployeeRestaurantEntityMapper employeeRestaurantEntityMapper;
     private final UserFeignClient userFeignClient;
+    private final JwtUtilsDomain jwtUtilsDomain;
 
     @Bean
     public IOrderPersistencePort orderPersistencePort(){
@@ -75,7 +77,7 @@ public class BeanConfiguration {
 
     @Bean
     public IOrderServicePort orderServicePort(){
-        return new OrderUseCase(orderPersistencePort());
+        return new OrderUseCase(orderPersistencePort(), jwtUtilsDomain);
     }
 
     @Bean

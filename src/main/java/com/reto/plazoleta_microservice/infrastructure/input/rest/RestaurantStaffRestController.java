@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/owner/restaurant-staff/")
 @RequiredArgsConstructor
-public class EmployeeRestaurantRestController {
+public class RestaurantStaffRestController {
 
     private final IEmployeeRestaurantHandler employeeRestaurantHandler;
 

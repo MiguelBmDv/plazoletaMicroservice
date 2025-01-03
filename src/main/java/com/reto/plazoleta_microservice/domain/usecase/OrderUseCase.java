@@ -2,25 +2,27 @@ package com.reto.plazoleta_microservice.domain.usecase;
 
 import java.util.List;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
 
 import com.reto.plazoleta_microservice.domain.api.IOrderServicePort;
 import com.reto.plazoleta_microservice.domain.model.Order;
 import com.reto.plazoleta_microservice.domain.spi.IOrderPersistencePort;
-import com.reto.plazoleta_microservice.infrastructure.security.JwtSecurityContext;
+import com.reto.plazoleta_microservice.domain.utils.JwtUtilsDomain;
+
 
 public class OrderUseCase implements IOrderServicePort {
 
     private final IOrderPersistencePort orderPersistencePort;
+    private final JwtUtilsDomain jwtUtilsDomain;
 
-    public OrderUseCase(IOrderPersistencePort orderPersistencePort) {
+    public OrderUseCase(IOrderPersistencePort orderPersistencePort, JwtUtilsDomain jwtUtilsDomain) {
         this.orderPersistencePort = orderPersistencePort;
+        this.jwtUtilsDomain = jwtUtilsDomain;
     }
 
     @Override
     public void saveOrder(Order order) {
-        Long clientId = extractIdFromToken();
+        Long clientId = jwtUtilsDomain.extractIdFromToken();
         order.setClientId(clientId);
         orderPersistencePort.saveOrder(order);
     }
@@ -36,6 +38,11 @@ public class OrderUseCase implements IOrderServicePort {
     }
 
     @Override
+    public Page<Order> getOrderByStatus(Long restaurantId, String status, int page, int size) {
+        return orderPersistencePort.getOrderByStatus(restaurantId, status, page, size);
+    }
+
+    @Override
     public void updateOrder(Order order) {
         orderPersistencePort.updateOrder(order);
     }
@@ -45,17 +52,4 @@ public class OrderUseCase implements IOrderServicePort {
         orderPersistencePort.deleteOrder(id);
     }
 
-    private Long extractIdFromToken() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null) {
-            JwtSecurityContext jwtSecurityContext = JwtSecurityContext.getContext(); 
-
-            if (jwtSecurityContext != null) {
-                return jwtSecurityContext.getDocumentNumber();   
-            }
-        }
-
-        throw new IllegalStateException("No se pudo extraer el documentNumber del JWT");
-    }
 }
