@@ -5,6 +5,7 @@ import java.util.List;
 import com.reto.plazoleta_microservice.domain.model.EmployeeRestaurant;
 import com.reto.plazoleta_microservice.domain.spi.IEmployeeRestaurantPersistencePort;
 import com.reto.plazoleta_microservice.infrastructure.exception.EmployeeAlreadyExistsException;
+import com.reto.plazoleta_microservice.infrastructure.exception.EmployeeNotFoundException;
 import com.reto.plazoleta_microservice.infrastructure.exception.NoDataFoundException;
 import com.reto.plazoleta_microservice.infrastructure.exception.RestaurantNotFoundException;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.entity.EmployeeRestauranEntity;
@@ -41,6 +42,12 @@ public class EmployeeRestaurantJpaAdapter implements IEmployeeRestaurantPersiste
     public EmployeeRestaurant getEmployeeRestaurant(Long restaurantNit) {
         return employeeRestaurantEntityMapper.toEmployeeRestaurant(employeeRestaurantRepository.findByRestaurantNit(restaurantNit)
                 .orElseThrow(RestaurantNotFoundException::new));
+    }
+
+    @Override
+    public EmployeeRestaurant getRestaurantIdByEmployeeId(Long employeeDocument) {
+        return employeeRestaurantEntityMapper.toEmployeeRestaurant(employeeRestaurantRepository.findByEmployeeDocument(employeeDocument)
+                .orElseThrow(EmployeeNotFoundException::new));
     }
 
     @Override

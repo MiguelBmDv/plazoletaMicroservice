@@ -100,17 +100,7 @@ public class OrderEntryHandler implements IOrderEntryHandler{
         updatedOrder.setRestaurantId(oldOrder.getRestaurantId()); 
         updatedOrder.setDate(oldOrder.getDate()); 
         updatedOrder.setClientId(oldOrder.getClientId());
-        updatedOrder.setStatus(orderEntryRequest.getStatus());
-        if (orderEntryRequest.getStatus() != null) {
-            updatedOrder.setStatus(orderEntryRequest.getStatus());
-        } else {
-            updatedOrder.setStatus(oldOrder.getStatus()); 
-        }
-        if (orderEntryRequest.getChefId() != null && orderEntryRequest.getChefId() != 0) {
-            updatedOrder.setChefId(orderEntryRequest.getChefId());
-        } else {
-            updatedOrder.setChefId(oldOrder.getChefId()); 
-        }
+
         orderServicePort.updateOrder(updatedOrder);
     }
 

@@ -16,4 +16,6 @@ public interface IEmployeeRestaurantServicePort {
 
     void deleteEmployeeRestaurant(Long employeeDocument);
 
+    EmployeeRestaurant getRestaurantIdByEmployeeId(Long employeeDocument);
+
 }

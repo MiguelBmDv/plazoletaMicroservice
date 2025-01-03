@@ -4,7 +4,10 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 
+import com.reto.plazoleta_microservice.domain.api.IEmployeeRestaurantServicePort;
 import com.reto.plazoleta_microservice.domain.api.IOrderServicePort;
+import com.reto.plazoleta_microservice.domain.constant.OrderStatusValidator;
+import com.reto.plazoleta_microservice.domain.model.EmployeeRestaurant;
 import com.reto.plazoleta_microservice.domain.model.Order;
 import com.reto.plazoleta_microservice.domain.spi.IOrderPersistencePort;
 import com.reto.plazoleta_microservice.domain.utils.JwtUtilsDomain;
@@ -13,11 +16,13 @@ import com.reto.plazoleta_microservice.domain.utils.JwtUtilsDomain;
 public class OrderUseCase implements IOrderServicePort {
 
     private final IOrderPersistencePort orderPersistencePort;
+    private final IEmployeeRestaurantServicePort employeeRestaurantServicePort;
     private final JwtUtilsDomain jwtUtilsDomain;
 
-    public OrderUseCase(IOrderPersistencePort orderPersistencePort, JwtUtilsDomain jwtUtilsDomain) {
+    public OrderUseCase(IOrderPersistencePort orderPersistencePort, JwtUtilsDomain jwtUtilsDomain,IEmployeeRestaurantServicePort employeeRestaurantServicePort ) {
         this.orderPersistencePort = orderPersistencePort;
         this.jwtUtilsDomain = jwtUtilsDomain;
+        this.employeeRestaurantServicePort = employeeRestaurantServicePort;
     }
 
     @Override
@@ -44,6 +49,21 @@ public class OrderUseCase implements IOrderServicePort {
 
     @Override
     public void updateOrder(Order order) {
+        Order existingOrder = orderPersistencePort.getOrder(order.getId());
+        Long chefIdFromToken = jwtUtilsDomain.extractIdFromToken();
+        EmployeeRestaurant employeeRestaurant = employeeRestaurantServicePort.getRestaurantIdByEmployeeId(chefIdFromToken);
+        if (!existingOrder.getRestaurantId().equals(employeeRestaurant.getRestaurantNit())) {
+            throw new IllegalArgumentException("El empleado no pertenece al restaurante de este pedido.");
+        }
+        if (existingOrder.getChefId() == null || existingOrder.getChefId() == 0) {
+            order.setChefId(chefIdFromToken);
+            order.setStatus("EN PROCESO");
+        } else if (!existingOrder.getChefId().equals(chefIdFromToken)) {
+            throw new IllegalArgumentException("El chefId ya está asignado y no puede ser modificado.");
+        }
+        if (!OrderStatusValidator.isValidTransition(existingOrder.getStatus(), order.getStatus())) {
+            throw new IllegalArgumentException("Transición de estado no permitida.");
+        }
         orderPersistencePort.updateOrder(order);
     }
 

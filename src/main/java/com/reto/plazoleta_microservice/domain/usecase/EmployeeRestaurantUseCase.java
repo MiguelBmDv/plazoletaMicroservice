@@ -47,6 +47,11 @@ public class EmployeeRestaurantUseCase implements IEmployeeRestaurantServicePort
     }
 
     @Override
+    public EmployeeRestaurant getRestaurantIdByEmployeeId(Long employeeDocument) {
+        return employeeRestaurantPersistencePort.getRestaurantIdByEmployeeId(employeeDocument);
+    }
+
+    @Override
     public void updateEmployeeRestaurant(EmployeeRestaurant employeeRestaurant) {
         employeeRestaurantPersistencePort.updateEmployeeRestaurant(employeeRestaurant);
     }
@@ -77,4 +82,5 @@ public class EmployeeRestaurantUseCase implements IEmployeeRestaurantServicePort
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No se encontró un restaurante para el propietario con ID: " + ownerId));
     }
+
 }
