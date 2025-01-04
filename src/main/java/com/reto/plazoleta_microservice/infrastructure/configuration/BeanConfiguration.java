@@ -30,6 +30,7 @@ import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.DishJpa
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.EmployeeRestaurantJpaAdapter;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.OrderJpaAdapter;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.RestaurantJpaAdapter;
+import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.SmsClient;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.UserFeignClient;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.mapper.CategoryEntityMapper;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.mapper.DishEntitytMapper;
@@ -69,6 +70,7 @@ public class BeanConfiguration {
     private final EmployeeRestaurantEntityMapper employeeRestaurantEntityMapper;
     private final UserFeignClient userFeignClient;
     private final JwtUtilsDomain jwtUtilsDomain;
+    private final SmsClient smsClient;
 
     @Bean
     public IOrderPersistencePort orderPersistencePort(){
@@ -77,7 +79,7 @@ public class BeanConfiguration {
 
     @Bean
     public IOrderServicePort orderServicePort(){
-        return new OrderUseCase(orderPersistencePort(), jwtUtilsDomain, employeeRestaurantServicePort());
+        return new OrderUseCase(smsClient, userFeignClient, orderPersistencePort(), jwtUtilsDomain, employeeRestaurantServicePort());
     }
 
     @Bean

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 
+import com.reto.plazoleta_microservice.application.dto.UserResponse;
 import com.reto.plazoleta_microservice.domain.api.IEmployeeRestaurantServicePort;
 import com.reto.plazoleta_microservice.domain.api.IOrderServicePort;
 import com.reto.plazoleta_microservice.domain.constant.OrderStatusValidator;
@@ -11,17 +12,24 @@ import com.reto.plazoleta_microservice.domain.model.EmployeeRestaurant;
 import com.reto.plazoleta_microservice.domain.model.Order;
 import com.reto.plazoleta_microservice.domain.spi.IOrderPersistencePort;
 import com.reto.plazoleta_microservice.domain.utils.JwtUtilsDomain;
+import com.reto.plazoleta_microservice.domain.utils.PinGenerator;
+import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.SmsClient;
+import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.UserFeignClient;
 
 
 public class OrderUseCase implements IOrderServicePort {
 
     private final IOrderPersistencePort orderPersistencePort;
     private final IEmployeeRestaurantServicePort employeeRestaurantServicePort;
+    private final UserFeignClient userFeignClient;
+    private final SmsClient smsClient;
     private final JwtUtilsDomain jwtUtilsDomain;
 
-    public OrderUseCase(IOrderPersistencePort orderPersistencePort, JwtUtilsDomain jwtUtilsDomain,IEmployeeRestaurantServicePort employeeRestaurantServicePort ) {
+    public OrderUseCase( SmsClient smsClient, UserFeignClient userFeignClient, IOrderPersistencePort orderPersistencePort, JwtUtilsDomain jwtUtilsDomain,IEmployeeRestaurantServicePort employeeRestaurantServicePort ) {
         this.orderPersistencePort = orderPersistencePort;
         this.jwtUtilsDomain = jwtUtilsDomain;
+        this.userFeignClient = userFeignClient;
+        this.smsClient = smsClient;
         this.employeeRestaurantServicePort = employeeRestaurantServicePort;
     }
 
@@ -51,7 +59,7 @@ public class OrderUseCase implements IOrderServicePort {
     public void updateOrder(Order order) {
         Order existingOrder = orderPersistencePort.getOrder(order.getId());
         Long chefIdFromToken = jwtUtilsDomain.extractIdFromToken();
-        EmployeeRestaurant employeeRestaurant = employeeRestaurantServicePort.getRestaurantIdByEmployeeId(chefIdFromToken);
+        EmployeeRestaurant employeeRestaurant = employeeRestaurantServicePort.getRestaurantIdByEmployeeId(chefIdFromToken); 
         if (!existingOrder.getRestaurantId().equals(employeeRestaurant.getRestaurantNit())) {
             throw new IllegalArgumentException("El empleado no pertenece al restaurante de este pedido.");
         }
@@ -64,7 +72,16 @@ public class OrderUseCase implements IOrderServicePort {
         if (!OrderStatusValidator.isValidTransition(existingOrder.getStatus(), order.getStatus())) {
             throw new IllegalArgumentException("Transición de estado no permitida.");
         }
+
         orderPersistencePort.updateOrder(order);
+        if ("LISTO".equals(order.getStatus())){
+            UserResponse user = userFeignClient.getUserByDocumentNumber(order.getClientId());
+            String phoneNumber = user.getPhone();
+            String pin = PinGenerator.generatePin(); 
+            String message = "Tu pedido está listo. Usa este PIN para recogerlo: " + pin;
+
+            smsClient.sendSms(phoneNumber, message);
+        }
     }
 
     @Override
