@@ -37,6 +37,7 @@ public class OrderUseCase implements IOrderServicePort {
     public void saveOrder(Order order) {
         Long clientId = jwtUtilsDomain.extractIdFromToken();
         order.setClientId(clientId);
+        order.setChefId(null);
         orderPersistencePort.saveOrder(order);
     }
 
@@ -63,12 +64,14 @@ public class OrderUseCase implements IOrderServicePort {
         if (!existingOrder.getRestaurantId().equals(employeeRestaurant.getRestaurantNit())) {
             throw new IllegalArgumentException("El empleado no pertenece al restaurante de este pedido.");
         }
+
         if (existingOrder.getChefId() == null || existingOrder.getChefId() == 0) {
             order.setChefId(chefIdFromToken);
             order.setStatus("EN PROCESO");
-        } else if (!existingOrder.getChefId().equals(chefIdFromToken)) {
-            throw new IllegalArgumentException("El chefId ya está asignado y no puede ser modificado.");
+        }else {
+            order.setChefId(existingOrder.getChefId()); 
         }
+
         if (!OrderStatusValidator.isValidTransition(existingOrder.getStatus(), order.getStatus())) {
             throw new IllegalArgumentException("Transición de estado no permitida.");
         }
