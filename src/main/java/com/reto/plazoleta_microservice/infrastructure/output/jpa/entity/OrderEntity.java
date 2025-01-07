@@ -25,5 +25,6 @@ public class OrderEntity {
     private String status;
     private Long chefId;
     private Long restaurantId;
+    private String securityPin;
 
 }

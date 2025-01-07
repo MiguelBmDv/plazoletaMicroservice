@@ -17,5 +17,6 @@ public class OrderEntryRequest {
     private Long chefId;
     private Long restaurantId;
     private List<OrderDishRequest> dishes;
+    private String securityPin;
 
 }

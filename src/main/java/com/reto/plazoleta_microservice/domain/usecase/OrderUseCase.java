@@ -61,35 +61,73 @@ public class OrderUseCase implements IOrderServicePort {
         Order existingOrder = orderPersistencePort.getOrder(order.getId());
         Long chefIdFromToken = jwtUtilsDomain.extractIdFromToken();
         EmployeeRestaurant employeeRestaurant = employeeRestaurantServicePort.getRestaurantIdByEmployeeId(chefIdFromToken); 
-        if (!existingOrder.getRestaurantId().equals(employeeRestaurant.getRestaurantNit())) {
-            throw new IllegalArgumentException("El empleado no pertenece al restaurante de este pedido.");
+        validateRestaurantOwnership(existingOrder, employeeRestaurant);
+        validateChefAssignment(existingOrder, chefIdFromToken);
+        validateOrderIsNotDelivered(existingOrder);
+        assignChefIfNecessary(existingOrder, order, chefIdFromToken);
+        validateStatusTransition(existingOrder, order);
+        if ("ENTREGADO".equals(order.getStatus())) {
+            validateSecurityPin(existingOrder, order);
         }
-
-        if (existingOrder.getChefId() == null || existingOrder.getChefId() == 0) {
-            order.setChefId(chefIdFromToken);
-            order.setStatus("EN PROCESO");
-        }else {
-            order.setChefId(existingOrder.getChefId()); 
-        }
-
-        if (!OrderStatusValidator.isValidTransition(existingOrder.getStatus(), order.getStatus())) {
-            throw new IllegalArgumentException("Transición de estado no permitida.");
-        }
-
-        orderPersistencePort.updateOrder(order);
-        if ("LISTO".equals(order.getStatus())){
-            UserResponse user = userFeignClient.getUserByDocumentNumber(order.getClientId());
-            String phoneNumber = user.getPhone();
-            String pin = PinGenerator.generatePin(); 
-            String message = "Tu pedido está listo. Usa este PIN para recogerlo: " + pin;
-
-            smsClient.sendSms(phoneNumber, message);
+        if ("LISTO".equals(order.getStatus())) {
+            handleOrderReady(order);
+        } else {
+            orderPersistencePort.updateOrder(order);
         }
     }
 
     @Override
     public void deleteOrder(Long id) {
         orderPersistencePort.deleteOrder(id);
+    }
+
+    private void validateRestaurantOwnership(Order existingOrder, EmployeeRestaurant employeeRestaurant) {
+        if (!existingOrder.getRestaurantId().equals(employeeRestaurant.getRestaurantNit())) {
+            throw new IllegalArgumentException("El empleado no pertenece al restaurante de este pedido.");
+        }
+    }
+    
+    private void validateChefAssignment(Order existingOrder, Long chefIdFromToken) {
+        if (existingOrder.getChefId() != null && !existingOrder.getChefId().equals(chefIdFromToken)) {
+            throw new IllegalArgumentException("El chef no coincide con el chef asignado para este pedido.");
+        }
+    }
+    
+    private void validateOrderIsNotDelivered(Order existingOrder) {
+        if ("ENTREGADO".equals(existingOrder.getStatus())) {
+            throw new IllegalArgumentException("No se puede modificar un pedido que ya ha sido entregado.");
+        }
+    }
+    
+    private void validateStatusTransition(Order existingOrder, Order order) {
+        if (!OrderStatusValidator.isValidTransition(existingOrder.getStatus(), order.getStatus())) {
+            throw new IllegalArgumentException("Transición de estado no permitida.");
+        }
+    }
+    
+    private void assignChefIfNecessary(Order existingOrder, Order order, Long chefIdFromToken) {
+        if (existingOrder.getChefId() == null || existingOrder.getChefId() == 0) {
+            order.setChefId(chefIdFromToken);
+            order.setStatus("EN PROCESO");
+        } else {
+            order.setChefId(existingOrder.getChefId());
+        }
+    }
+
+    private void validateSecurityPin(Order existingOrder, Order order) {
+        if (order.getSecurityPin() == null || !order.getSecurityPin().equals(existingOrder.getSecurityPin())) {
+            throw new IllegalArgumentException("El PIN de seguridad es incorrecto.");
+        }
+    }
+
+    private void handleOrderReady(Order order) {
+        UserResponse user = userFeignClient.getUserByDocumentNumber(order.getClientId());
+        String phoneNumber = user.getPhone();
+        String pin = PinGenerator.generatePin(); 
+        order.setSecurityPin(pin);
+        orderPersistencePort.updateOrder(order);
+        String message = "Tu pedido está listo. Usa este PIN para recogerlo: " + pin;
+        smsClient.sendSms(phoneNumber, message);
     }
 
 }
