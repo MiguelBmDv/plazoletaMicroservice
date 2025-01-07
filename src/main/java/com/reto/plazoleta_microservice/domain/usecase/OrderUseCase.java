@@ -59,16 +59,24 @@ public class OrderUseCase implements IOrderServicePort {
     @Override
     public void updateOrder(Order order) {
         Order existingOrder = orderPersistencePort.getOrder(order.getId());
-        Long chefIdFromToken = jwtUtilsDomain.extractIdFromToken();
-        EmployeeRestaurant employeeRestaurant = employeeRestaurantServicePort.getRestaurantIdByEmployeeId(chefIdFromToken); 
-        validateRestaurantOwnership(existingOrder, employeeRestaurant);
-        validateChefAssignment(existingOrder, chefIdFromToken);
-        validateOrderIsNotDelivered(existingOrder);
-        assignChefIfNecessary(existingOrder, order, chefIdFromToken);
-        validateStatusTransition(existingOrder, order);
+        Long idFromToken = jwtUtilsDomain.extractIdFromToken();
+        UserResponse user = userFeignClient.getUserByDocumentNumber(idFromToken);
+        if ("USER".equals(user.getRol())) {
+            validateCancelOrder(existingOrder, order, user, idFromToken); 
+        } else if ("EMPLOYEE".equals(user.getRol())) {
+            EmployeeRestaurant employeeRestaurant = employeeRestaurantServicePort.getRestaurantIdByEmployeeId(idFromToken);
+            validateRestaurantOwnership(existingOrder, employeeRestaurant);
+            validateChefAssignment(existingOrder, idFromToken);
+            validateOrderIsNotDelivered(existingOrder);
+            assignChefIfNecessary(existingOrder, order, idFromToken);
+            validateStatusTransition(existingOrder, order);
+        } else {
+            throw new IllegalArgumentException("Rol no reconocido.");
+        }
         if ("ENTREGADO".equals(order.getStatus())) {
             validateSecurityPin(existingOrder, order);
         }
+
         if ("LISTO".equals(order.getStatus())) {
             handleOrderReady(order);
         } else {
@@ -80,6 +88,7 @@ public class OrderUseCase implements IOrderServicePort {
     public void deleteOrder(Long id) {
         orderPersistencePort.deleteOrder(id);
     }
+    
 
     private void validateRestaurantOwnership(Order existingOrder, EmployeeRestaurant employeeRestaurant) {
         if (!existingOrder.getRestaurantId().equals(employeeRestaurant.getRestaurantNit())) {
@@ -87,8 +96,8 @@ public class OrderUseCase implements IOrderServicePort {
         }
     }
     
-    private void validateChefAssignment(Order existingOrder, Long chefIdFromToken) {
-        if (existingOrder.getChefId() != null && !existingOrder.getChefId().equals(chefIdFromToken)) {
+    private void validateChefAssignment(Order existingOrder, Long idFromToken) {
+        if (existingOrder.getChefId() != null && !existingOrder.getChefId().equals(idFromToken)) {
             throw new IllegalArgumentException("El chef no coincide con el chef asignado para este pedido.");
         }
     }
@@ -105,29 +114,57 @@ public class OrderUseCase implements IOrderServicePort {
         }
     }
     
-    private void assignChefIfNecessary(Order existingOrder, Order order, Long chefIdFromToken) {
+    private void assignChefIfNecessary(Order existingOrder, Order order, Long idFromToken) {
         if (existingOrder.getChefId() == null || existingOrder.getChefId() == 0) {
-            order.setChefId(chefIdFromToken);
+            order.setChefId(idFromToken);
             order.setStatus("EN PROCESO");
         } else {
             order.setChefId(existingOrder.getChefId());
         }
     }
-
+    
     private void validateSecurityPin(Order existingOrder, Order order) {
         if (order.getSecurityPin() == null || !order.getSecurityPin().equals(existingOrder.getSecurityPin())) {
             throw new IllegalArgumentException("El PIN de seguridad es incorrecto.");
         }
     }
-
+    
     private void handleOrderReady(Order order) {
         UserResponse user = userFeignClient.getUserByDocumentNumber(order.getClientId());
         String phoneNumber = user.getPhone();
-        String pin = PinGenerator.generatePin(); 
+        String pin = PinGenerator.generatePin();
         order.setSecurityPin(pin);
         orderPersistencePort.updateOrder(order);
         String message = "Tu pedido está listo. Usa este PIN para recogerlo: " + pin;
         smsClient.sendSms(phoneNumber, message);
     }
+    
+    private void validateCancelOrder(Order existingOrder, Order order, UserResponse user, Long idFromToken) {
+        if (!idFromToken.equals(existingOrder.getClientId())) {
+            throw new IllegalArgumentException("No tienes permiso para modificar este pedido.");
+        }
+    
+        if ("CANCELADO".equals(order.getStatus())) {
+            if (order.getStatus().equals(existingOrder.getStatus())){
+                throw new IllegalArgumentException("No puedes modificar un pedido cancelado.");
+            }
+            if (!"PENDIENTE".equals(existingOrder.getStatus())) {
+                String phoneNumber = user.getPhone();
+                String message = "No puedes cancelar un pedido que no está en estado PENDIENTE.";
+                smsClient.sendSms(phoneNumber, message);
+                throw new IllegalArgumentException("No puedes cancelar un pedido que no está en estado PENDIENTE.");
+            }
+            order.setId(existingOrder.getId());
+            order.setChefId(existingOrder.getChefId());
+            order.setRestaurantId(existingOrder.getRestaurantId());
+            order.setClientId(existingOrder.getClientId());
+            order.setSecurityPin(existingOrder.getSecurityPin());
+            orderPersistencePort.updateOrder(order);
+    
+        } else if (order.getStatus() == null || !"CANCELADO".equals(order.getStatus())) {
+            throw new IllegalArgumentException("El estado del pedido no es válido.");
+        }
+    }
+    
 
 }

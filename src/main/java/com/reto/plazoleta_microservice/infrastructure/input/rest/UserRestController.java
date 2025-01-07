@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -44,10 +45,16 @@ public class UserRestController {
         return ResponseEntity.ok(menuHandler.getDishesByRestaurant(restaurantId, category, page, size));
     }
 
-    @PostMapping("orders")
+    @PostMapping("order")
     public ResponseEntity<Void> saveOrder(@RequestBody OrderEntryRequest request) {
         orderEntryHandler.saveOrderInEntry(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PutMapping("order")
+    public ResponseEntity<Void> updateOrder(@RequestBody OrderEntryRequest request) {
+        orderEntryHandler.updateOrderInEntry(request);
+        return ResponseEntity.noContent().build();
     }
 
 }
