@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.reto.plazoleta_microservice.infrastructure.configuration.FeignClientConfig;
 
 @FeignClient(name = "sms-microservice", url = "http://localhost:8092" , configuration = FeignClientConfig.class)
-public interface SmsClient {
+public interface SmsFeignClient {
 
     @RequestMapping("/sms/send")
     void sendSms(@RequestParam("toPhoneNumber") String toPhoneNumber,

@@ -1,44 +1,55 @@
 package com.reto.plazoleta_microservice.domain.usecase;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
 
-import com.reto.plazoleta_microservice.application.dto.UserResponse;
 import com.reto.plazoleta_microservice.domain.api.IEmployeeRestaurantServicePort;
 import com.reto.plazoleta_microservice.domain.api.IOrderServicePort;
 import com.reto.plazoleta_microservice.domain.constant.OrderStatusValidator;
 import com.reto.plazoleta_microservice.domain.model.EmployeeRestaurant;
 import com.reto.plazoleta_microservice.domain.model.Order;
+import com.reto.plazoleta_microservice.domain.model.Traceability;
+import com.reto.plazoleta_microservice.domain.model.User;
 import com.reto.plazoleta_microservice.domain.spi.IOrderPersistencePort;
+import com.reto.plazoleta_microservice.domain.spi.ITraceabilityPersistencePort;
+import com.reto.plazoleta_microservice.domain.spi.IUserPersistencePort;
+import com.reto.plazoleta_microservice.domain.spi.SmsServicePersistencePort;
+import com.reto.plazoleta_microservice.domain.utils.IdGenerator;
 import com.reto.plazoleta_microservice.domain.utils.JwtUtilsDomain;
 import com.reto.plazoleta_microservice.domain.utils.PinGenerator;
-import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.SmsClient;
-import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.UserFeignClient;
-
 
 public class OrderUseCase implements IOrderServicePort {
 
     private final IOrderPersistencePort orderPersistencePort;
     private final IEmployeeRestaurantServicePort employeeRestaurantServicePort;
-    private final UserFeignClient userFeignClient;
-    private final SmsClient smsClient;
+    private final IUserPersistencePort userPersistencePort;
+    private final SmsServicePersistencePort smsServicePersistencePort;
     private final JwtUtilsDomain jwtUtilsDomain;
+    private final ITraceabilityPersistencePort traceabilityPersistencePort;
 
-    public OrderUseCase( SmsClient smsClient, UserFeignClient userFeignClient, IOrderPersistencePort orderPersistencePort, JwtUtilsDomain jwtUtilsDomain,IEmployeeRestaurantServicePort employeeRestaurantServicePort ) {
+    public OrderUseCase( ITraceabilityPersistencePort traceabilityPersistencePort, IUserPersistencePort userPersistencePort, SmsServicePersistencePort smsServicePersistencePort, IOrderPersistencePort orderPersistencePort, JwtUtilsDomain jwtUtilsDomain,IEmployeeRestaurantServicePort employeeRestaurantServicePort ) {
+        this.userPersistencePort = userPersistencePort;
         this.orderPersistencePort = orderPersistencePort;
+        this.traceabilityPersistencePort = traceabilityPersistencePort;
         this.jwtUtilsDomain = jwtUtilsDomain;
-        this.userFeignClient = userFeignClient;
-        this.smsClient = smsClient;
+        this.smsServicePersistencePort= smsServicePersistencePort;
         this.employeeRestaurantServicePort = employeeRestaurantServicePort;
     }
 
     @Override
     public void saveOrder(Order order) {
         Long clientId = jwtUtilsDomain.extractIdFromToken();
+        User user = userPersistencePort.getUserByDocumentNumber(clientId);
         order.setClientId(clientId);
         order.setChefId(null);
+        order.setStatus("PENDIENTE");
+        order.setDate(LocalDate.now());
+        order.setSecurityPin(null);
         orderPersistencePort.saveOrder(order);
+        registerTraceability(order, user);
     }
 
     @Override
@@ -60,9 +71,12 @@ public class OrderUseCase implements IOrderServicePort {
     public void updateOrder(Order order) {
         Order existingOrder = orderPersistencePort.getOrder(order.getId());
         Long idFromToken = jwtUtilsDomain.extractIdFromToken();
-        UserResponse user = userFeignClient.getUserByDocumentNumber(idFromToken);
+        User user = userPersistencePort.getUserByDocumentNumber(idFromToken);
+        User client = userPersistencePort.getUserByDocumentNumber(order.getClientId());
         if ("USER".equals(user.getRol())) {
             validateCancelOrder(existingOrder, order, user, idFromToken); 
+            orderPersistencePort.updateOrder(order);
+            registerTraceability(order, user);
         } else if ("EMPLOYEE".equals(user.getRol())) {
             EmployeeRestaurant employeeRestaurant = employeeRestaurantServicePort.getRestaurantIdByEmployeeId(idFromToken);
             validateRestaurantOwnership(existingOrder, employeeRestaurant);
@@ -70,18 +84,24 @@ public class OrderUseCase implements IOrderServicePort {
             validateOrderIsNotDelivered(existingOrder);
             assignChefIfNecessary(existingOrder, order, idFromToken);
             validateStatusTransition(existingOrder, order);
+
+            if ("ENTREGADO".equals(order.getStatus())) {
+                validateSecurityPin(existingOrder, order);
+            }
+    
+            if ("LISTO".equals(order.getStatus())) {
+                handleOrderReady(order, user);
+                registerTraceabilityChef(existingOrder, order, user, client);
+    
+            } else {
+                orderPersistencePort.updateOrder(order);
+                registerTraceabilityChef(existingOrder, order, user, client);
+            }
+
         } else {
             throw new IllegalArgumentException("Rol no reconocido.");
         }
-        if ("ENTREGADO".equals(order.getStatus())) {
-            validateSecurityPin(existingOrder, order);
-        }
-
-        if ("LISTO".equals(order.getStatus())) {
-            handleOrderReady(order);
-        } else {
-            orderPersistencePort.updateOrder(order);
-        }
+        
     }
 
     @Override
@@ -89,6 +109,38 @@ public class OrderUseCase implements IOrderServicePort {
         orderPersistencePort.deleteOrder(id);
     }
     
+
+    private void registerTraceability(Order order, User user) {
+        Traceability traceability = new Traceability(
+        IdGenerator.generateId(),            
+        order.getId(),                        
+        order.getClientId(),                  
+        user.getEmail(),            
+        LocalDateTime.now(),   
+        null,                     
+        order.getStatus(),                   
+        order.getChefId(),                   
+        null                          
+    );
+
+    traceabilityPersistencePort.saveTraceability(traceability);
+    }
+
+    private void registerTraceabilityChef(Order oldOrder, Order order, User user, User client) {
+        Traceability traceability = new Traceability(
+        IdGenerator.generateId(),            
+        oldOrder.getId(),                        
+        oldOrder.getClientId(),                  
+        client.getEmail(),            
+        LocalDateTime.now(),   
+        oldOrder.getStatus(),                     
+        order.getStatus(),                   
+        user.getDocumentNumber(),                   
+        user.getEmail()                        
+    );
+
+    traceabilityPersistencePort.saveTraceability(traceability);
+    }
 
     private void validateRestaurantOwnership(Order existingOrder, EmployeeRestaurant employeeRestaurant) {
         if (!existingOrder.getRestaurantId().equals(employeeRestaurant.getRestaurantNit())) {
@@ -129,17 +181,16 @@ public class OrderUseCase implements IOrderServicePort {
         }
     }
     
-    private void handleOrderReady(Order order) {
-        UserResponse user = userFeignClient.getUserByDocumentNumber(order.getClientId());
+    private void handleOrderReady(Order order, User user) {
         String phoneNumber = user.getPhone();
         String pin = PinGenerator.generatePin();
         order.setSecurityPin(pin);
         orderPersistencePort.updateOrder(order);
         String message = "Tu pedido está listo. Usa este PIN para recogerlo: " + pin;
-        smsClient.sendSms(phoneNumber, message);
+        smsServicePersistencePort.sendSms(phoneNumber, message);
     }
     
-    private void validateCancelOrder(Order existingOrder, Order order, UserResponse user, Long idFromToken) {
+    private void validateCancelOrder(Order existingOrder, Order order, User user, Long idFromToken) {
         if (!idFromToken.equals(existingOrder.getClientId())) {
             throw new IllegalArgumentException("No tienes permiso para modificar este pedido.");
         }
@@ -151,7 +202,7 @@ public class OrderUseCase implements IOrderServicePort {
             if (!"PENDIENTE".equals(existingOrder.getStatus())) {
                 String phoneNumber = user.getPhone();
                 String message = "No puedes cancelar un pedido que no está en estado PENDIENTE.";
-                smsClient.sendSms(phoneNumber, message);
+                smsServicePersistencePort.sendSms(phoneNumber, message);
                 throw new IllegalArgumentException("No puedes cancelar un pedido que no está en estado PENDIENTE.");
             }
             order.setId(existingOrder.getId());
@@ -159,12 +210,13 @@ public class OrderUseCase implements IOrderServicePort {
             order.setRestaurantId(existingOrder.getRestaurantId());
             order.setClientId(existingOrder.getClientId());
             order.setSecurityPin(existingOrder.getSecurityPin());
-            orderPersistencePort.updateOrder(order);
     
         } else if (order.getStatus() == null || !"CANCELADO".equals(order.getStatus())) {
             throw new IllegalArgumentException("El estado del pedido no es válido.");
         }
     }
+
+
     
 
 }

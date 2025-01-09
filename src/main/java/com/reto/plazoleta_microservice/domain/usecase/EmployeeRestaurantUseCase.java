@@ -2,35 +2,34 @@ package com.reto.plazoleta_microservice.domain.usecase;
 
 import java.util.List;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-
-import com.reto.plazoleta_microservice.application.dto.UserResponse;
 import com.reto.plazoleta_microservice.domain.api.IEmployeeRestaurantServicePort;
 import com.reto.plazoleta_microservice.domain.model.EmployeeRestaurant;
 import com.reto.plazoleta_microservice.domain.model.Restaurant;
+import com.reto.plazoleta_microservice.domain.model.User;
 import com.reto.plazoleta_microservice.domain.spi.IEmployeeRestaurantPersistencePort;
 import com.reto.plazoleta_microservice.domain.spi.IRestaurantPersistencePort;
-import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.UserFeignClient;
-import com.reto.plazoleta_microservice.infrastructure.security.JwtSecurityContext;
+import com.reto.plazoleta_microservice.domain.spi.IUserPersistencePort;
+import com.reto.plazoleta_microservice.domain.utils.JwtUtilsDomain;
 
 public class EmployeeRestaurantUseCase implements IEmployeeRestaurantServicePort {
 
     private final IEmployeeRestaurantPersistencePort employeeRestaurantPersistencePort;
-    private final UserFeignClient userFeignClient;
+    private final IUserPersistencePort userPersistencePort;
     private final IRestaurantPersistencePort restaurantPersistencePort;
+    private final JwtUtilsDomain jwtUtilsDomain;
 
-    public EmployeeRestaurantUseCase (IEmployeeRestaurantPersistencePort employeeRestaurantPersistencePort, UserFeignClient userFeignClient, IRestaurantPersistencePort restaurantPersistencePort){
+    public EmployeeRestaurantUseCase (IEmployeeRestaurantPersistencePort employeeRestaurantPersistencePort, IUserPersistencePort userPersistencePort, IRestaurantPersistencePort restaurantPersistencePort, JwtUtilsDomain jwtUtilsDomain){
         this.employeeRestaurantPersistencePort = employeeRestaurantPersistencePort;
-        this.userFeignClient = userFeignClient; 
+        this.userPersistencePort = userPersistencePort; 
         this.restaurantPersistencePort = restaurantPersistencePort;
+        this.jwtUtilsDomain = jwtUtilsDomain;
     }
 
     @Override
     public void saveEmployeeRestaurant(EmployeeRestaurant employeeRestaurant) {
-        UserResponse user = userFeignClient.getUserByDocumentNumber(employeeRestaurant.getEmployeeDocument());
+        User user = userPersistencePort.getUserByDocumentNumber(employeeRestaurant.getEmployeeDocument());
         employeeRestaurant.setEmployeeDocument(user.getDocumentNumber());
-        Long ownerId = extractOwnerIdFromToken();
+        Long ownerId = jwtUtilsDomain.extractIdFromToken();
         Restaurant restaurant = findRestaurantByOwnerId(ownerId);
         employeeRestaurant.setRestaurantNit(restaurant.getNit());
         employeeRestaurantPersistencePort.saveEmployeeRestaurant(employeeRestaurant);
@@ -61,20 +60,6 @@ public class EmployeeRestaurantUseCase implements IEmployeeRestaurantServicePort
         employeeRestaurantPersistencePort.deleteEmployeeRestaurant(employeeDocument);
     }
     
-    private Long extractOwnerIdFromToken() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null) {
-            JwtSecurityContext jwtSecurityContext = JwtSecurityContext.getContext(); 
-
-            if (jwtSecurityContext != null) {
-                return jwtSecurityContext.getDocumentNumber(); 
-            }
-        }
-
-        throw new IllegalStateException("No se pudo extraer el documentNumber del JWT");
-    }
-
     private Restaurant findRestaurantByOwnerId(Long ownerId) {
         List<Restaurant> allRestaurants = restaurantPersistencePort.getAllRestaurant();
         return allRestaurants.stream()

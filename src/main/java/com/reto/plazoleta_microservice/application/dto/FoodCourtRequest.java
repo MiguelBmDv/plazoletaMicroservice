@@ -15,5 +15,4 @@ public class FoodCourtRequest {
     private String photo;
     private Long nit;
 
-
 }

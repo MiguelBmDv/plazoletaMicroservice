@@ -58,7 +58,7 @@ public class JwtService {
                 .collect(Collectors.toList());
         }
     
-        return List.of(); // Devuelve una lista vacía si no hay roles válidos
+        return List.of(); 
     }
 
     public Long extractDocumentNumber(String token) {

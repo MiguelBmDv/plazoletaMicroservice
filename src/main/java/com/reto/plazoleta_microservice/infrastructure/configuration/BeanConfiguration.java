@@ -3,6 +3,7 @@ package com.reto.plazoleta_microservice.infrastructure.configuration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.reto.plazoleta_microservice.application.mapper.TraceabilityMapper;
 import com.reto.plazoleta_microservice.domain.api.ICategoryServicePort;
 import com.reto.plazoleta_microservice.domain.api.IDishServicePort;
 import com.reto.plazoleta_microservice.domain.api.IEmployeeRestaurantServicePort;
@@ -17,6 +18,9 @@ import com.reto.plazoleta_microservice.domain.spi.IOrderDishPersistencePort;
 import com.reto.plazoleta_microservice.domain.spi.IOrderPersistencePort;
 import com.reto.plazoleta_microservice.domain.spi.IPhotoPersistencePort;
 import com.reto.plazoleta_microservice.domain.spi.IRestaurantPersistencePort;
+import com.reto.plazoleta_microservice.domain.spi.ITraceabilityPersistencePort;
+import com.reto.plazoleta_microservice.domain.spi.IUserPersistencePort;
+import com.reto.plazoleta_microservice.domain.spi.SmsServicePersistencePort;
 import com.reto.plazoleta_microservice.domain.usecase.CategoryUseCase;
 import com.reto.plazoleta_microservice.domain.usecase.DishUseCase;
 import com.reto.plazoleta_microservice.domain.usecase.EmployeeRestaurantUseCase;
@@ -30,7 +34,11 @@ import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.DishJpa
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.EmployeeRestaurantJpaAdapter;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.OrderJpaAdapter;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.RestaurantJpaAdapter;
-import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.SmsClient;
+import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.SmsServiceFeignAdapter;
+import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.TraceabilityFeignAdapter;
+import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.UserFeignAdapter;
+import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.SmsFeignClient;
+import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.TraceabilityFeignClient;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter.client.UserFeignClient;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.mapper.CategoryEntityMapper;
 import com.reto.plazoleta_microservice.infrastructure.output.jpa.mapper.DishEntitytMapper;
@@ -70,7 +78,24 @@ public class BeanConfiguration {
     private final EmployeeRestaurantEntityMapper employeeRestaurantEntityMapper;
     private final UserFeignClient userFeignClient;
     private final JwtUtilsDomain jwtUtilsDomain;
-    private final SmsClient smsClient;
+    private final SmsFeignClient smsFeignClient;
+    private final TraceabilityFeignClient traceabilityFeignClient;
+    private final TraceabilityMapper traceabilityMapper;
+
+    @Bean
+    public SmsServicePersistencePort smsServicePersistencePort(){
+        return new SmsServiceFeignAdapter(smsFeignClient);
+    }
+
+    @Bean 
+    public ITraceabilityPersistencePort traceabilityPersistencePort(){
+        return new TraceabilityFeignAdapter(traceabilityFeignClient,traceabilityMapper);
+    }
+    
+    @Bean
+    public IUserPersistencePort userPersistencePort(){
+        return new UserFeignAdapter(userFeignClient);
+    }
 
     @Bean
     public IOrderPersistencePort orderPersistencePort(){
@@ -79,7 +104,7 @@ public class BeanConfiguration {
 
     @Bean
     public IOrderServicePort orderServicePort(){
-        return new OrderUseCase(smsClient, userFeignClient, orderPersistencePort(), jwtUtilsDomain, employeeRestaurantServicePort());
+        return new OrderUseCase( traceabilityPersistencePort(),userPersistencePort(),smsServicePersistencePort(), orderPersistencePort(),jwtUtilsDomain, employeeRestaurantServicePort());
     }
 
     @Bean
@@ -139,7 +164,7 @@ public class BeanConfiguration {
 
     @Bean
     public IEmployeeRestaurantServicePort employeeRestaurantServicePort(){
-        return new EmployeeRestaurantUseCase(employeeRestaurantPersistencePort(),userFeignClient,  restaurantPersistencePort());
+        return new EmployeeRestaurantUseCase(employeeRestaurantPersistencePort(),userPersistencePort(),  restaurantPersistencePort(), jwtUtilsDomain);
     }
 
 }

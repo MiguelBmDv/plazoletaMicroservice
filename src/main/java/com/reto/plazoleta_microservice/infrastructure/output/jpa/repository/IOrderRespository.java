@@ -1,5 +1,6 @@
 package com.reto.plazoleta_microservice.infrastructure.output.jpa.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -12,7 +13,7 @@ public interface IOrderRespository extends JpaRepository <OrderEntity, Long> {
 
     Optional<OrderEntity> findByClientId(Long clientId);
 
-    Optional<OrderEntity> findByClientIdAndStatusNot(Long clientId, String string);
+    Optional<OrderEntity> findByClientIdAndStatusNotIn(Long clientId, List<String> statuses);
 
     Page<OrderEntity> findByRestaurantId(Long restaurantId, Pageable pageable);
 

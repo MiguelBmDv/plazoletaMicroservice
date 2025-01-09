@@ -1,6 +1,5 @@
 package com.reto.plazoleta_microservice.application.handler;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -40,8 +39,6 @@ public class OrderEntryHandler implements IOrderEntryHandler{
         Long orderId = IdGenerator.generateId();
         Order order = orderRequestMapper.toOrder(orderEntryRequest);
         order.setId(orderId);
-        order.setStatus("PENDIENTE");
-        order.setDate(LocalDate.now());
         orderServicePort.saveOrder(order);
         List<OrderDish> orderDishes = orderRequestMapper.toOrderDishes(order.getId(), orderEntryRequest.getDishes());
         boolean allDishesBelongToRestaurant = orderDishes.stream()

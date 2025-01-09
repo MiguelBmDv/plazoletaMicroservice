@@ -1,5 +1,6 @@
 package com.reto.plazoleta_microservice.infrastructure.output.jpa.adapter;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -98,9 +99,9 @@ public class OrderJpaAdapter implements IOrderPersistencePort, IOrderDishPersist
     }
 
     public void validateOrderIsNotActive(Long clientId) {
-        Optional<OrderEntity> existingOrder = orderRepository.findByClientIdAndStatusNot(
-            clientId, 
-            "ENTREGADO"
+        Optional<OrderEntity> existingOrder = orderRepository.findByClientIdAndStatusNotIn(
+            clientId,
+            Arrays.asList("ENTREGADO", "CANCELADO")
         );
 
         if (existingOrder.isPresent()) {

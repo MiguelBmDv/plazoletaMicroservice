@@ -18,8 +18,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtService jwtService;
-
-
+    
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable()) 
